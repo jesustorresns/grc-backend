@@ -1,0 +1,59 @@
+name: Build and Deploy
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java version
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+      - name: Build with Gradle
+        uses: gradle/gradle-build-action@v3.1.0
+        with:
+          gradle-version: 8.6
+          arguments: clean assemble
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: build-artifact
+          retention-days: 1
+          path: '${{ github.workspace }}/build/libs/*.jar'
+  docker-image:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker Build
+        run: docker build --tag newgrc:latest .
+  deploy:
+    needs: [ build, docker-image ]
+    runs-on: ubuntu-latest
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4.1.7
+        with:
+          name: build-artifact
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3.0.1
+        with:
+          app-name: 'newgrc-backend'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
+          package: '*.jar'
+          type: 'jar'
+          restart: true
+          clean: true
+
