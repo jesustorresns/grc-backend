@@ -13,7 +13,7 @@ public class ApiSwaggerConfig {
 		return new OpenAPI()
 			.info(new Info()
 				.title("New-GRC Backend API")
-				.version("0.0.1")
+				.version("0.0.2")
 				.description("Documentación de la API de New-GRC"));
 	}
 }
